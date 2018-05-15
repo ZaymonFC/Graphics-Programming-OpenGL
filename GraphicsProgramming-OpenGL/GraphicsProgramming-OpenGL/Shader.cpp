@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <GLM/mat4x4.hpp>
 
 
 Shader::Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
@@ -122,4 +123,49 @@ auto Shader::SetInt(const std::string& name, const int value) const -> void
 auto Shader::SetFloat(const std::string& name, const float value) const -> void
 {
 	glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+}
+
+auto Shader::SetVec2(const std::string &name, const glm::vec2 &value) const -> void
+{
+	glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+}
+
+auto Shader::SetVec2(const std::string &name, float x, float y) const -> void
+{
+	glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
+}
+
+auto Shader::SetVec3(const std::string &name, const glm::vec3 &value) const -> void
+{
+	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+}
+
+auto Shader::SetVec3(const std::string &name, float x, float y, float z) const -> void
+{
+	glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
+}
+
+auto Shader::SetVec4(const std::string &name, const glm::vec4 &value) const -> void
+{
+	glUniform4fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+}
+
+auto Shader::SetVec4(const std::string &name, float x, float y, float z, float w) -> void
+{
+	glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
+}
+
+auto Shader::SetMat2(const std::string &name, const glm::mat2 &mat) const -> void
+{
+	glUniformMatrix2fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+}
+
+auto Shader::SetMat3(const std::string &name, const glm::mat3 &mat) const -> void
+{
+	glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+}
+
+auto Shader::SetMat4(const std::string &name, const glm::mat4 &mat) const -> void
+{
+	glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
 }
