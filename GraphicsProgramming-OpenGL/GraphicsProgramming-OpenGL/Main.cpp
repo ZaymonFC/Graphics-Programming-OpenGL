@@ -12,18 +12,35 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "Camera.h"
 
 //
 // ─── FUNCTION PROTOTYPES ────────────────────────────────────────────────────────
 //
 auto framebuffer_size_callback(GLFWwindow* window, int width, int height) -> void;
+auto mouse_callback(GLFWwindow* window, double xpos, double ypos) -> void;
 auto ProcessInput(GLFWwindow * window) -> void;
 
 //
 // ─── GLOBAL PARAMETERS ──────────────────────────────────────────────────────────
 //
-const auto Screen_Width = 800.0f;
-const auto Screen_Height = 600.0f;
+const auto Screen_Width = 1280.0f;
+const auto Screen_Height = 720.0f;
+const auto fov = 55.0f;
+
+
+// Camera Base
+auto _camera = Camera();
+
+// Frame Timing
+auto deltaTime = 0.0f;	// Time between current frame and last frame
+auto lastFrame = 0.0f; // Time of last frame
+
+// Mouse Position
+auto mouseLastX = Screen_Width / 2;
+auto mouseLastY = Screen_Height / 2;
+auto firstMousePoll = false;
+
 
 int main(int argc, char* argv[])
 {
@@ -37,16 +54,18 @@ int main(int argc, char* argv[])
 	// ─── CREATE WINDOW ──────────────────────────────────────────────────────────────
 	
 	// Weird errors? Maybe don't make this const
-	const auto window = glfwCreateWindow(Screen_Width, Screen_Height, "Graphics Programming", nullptr, nullptr);
+	const auto window = glfwCreateWindow(static_cast<int>(Screen_Width), static_cast<int>(Screen_Height), "Graphics Programming", nullptr, nullptr);
 	if (window == nullptr)
 	{
 		std::cout << "Failed to create GLFW Window" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
 
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, mouse_callback);
 
 	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
 	{
@@ -122,7 +141,6 @@ int main(int argc, char* argv[])
 //		1, 2, 3  // second triangle
 //	};
 
-
 	unsigned int VBO, VAO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -166,7 +184,7 @@ int main(int argc, char* argv[])
 	// Load in the image data and generate the texture
 	int width, height, nrChannels;
 	stbi_set_flip_vertically_on_load(true);
-	unsigned char *data = stbi_load("textures/container.jpg", &width, &height, &nrChannels, 0);
+	auto data = stbi_load("textures/container.jpg", &width, &height, &nrChannels, 0);
 	if(data)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -219,8 +237,13 @@ int main(int argc, char* argv[])
 	//   :::::: A P P L I C A T I O N   M A I N L O O P : :  :   :    :     :        :          :
 	// ──────────────────────────────────────────────────────────────────────────────────────────
 	//
+
 	while(!glfwWindowShouldClose(window))
 	{
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		ProcessInput(window);
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -234,10 +257,10 @@ int main(int argc, char* argv[])
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture2);
 
-		glm::mat4 view;
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+		// Camera and view calculations -----
+		const auto view = _camera.GetViewMatrix();
 
-		const auto projection = glm::perspective(glm::radians(45.0f), Screen_Width / Screen_Height, 0.1f, 100.0f);
+		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, 0.1f, 100.0f);
 
 		// Get matrix's uniform location and set matrix
 		shaderProgram.Use();
@@ -287,11 +310,42 @@ auto ProcessInput(GLFWwindow* window) -> void
 		glfwSetWindowShouldClose(window, true);
 	}
 
-	if(glfwGetKey(window, GLFW_KEY_UP))
+	// Camera Movement
+	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		
+		_camera.ProcessKeyboard(FORWARD, deltaTime);
 	}
+	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		_camera.ProcessKeyboard(BACKWARD, deltaTime);
+	}
+	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	{
+		_camera.ProcessKeyboard(LEFT, deltaTime);
+	}
+	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	{
+		_camera.ProcessKeyboard(RIGHT, deltaTime);
+	}
+
 }
+
+auto mouse_callback(GLFWwindow* window, double xpos, double ypos) -> void
+{
+	if (firstMousePoll)
+	{
+		mouseLastX = xpos;
+		mouseLastY = ypos;
+		firstMousePoll = false;
+	}
+	const float xoffset = xpos - mouseLastX;
+	const float yoffset = mouseLastY - ypos; // reversed since y-coordinates range from bottom to top
+	mouseLastX = xpos;
+	mouseLastY = ypos;
+
+	_camera.ProcessMouseLook(xoffset, yoffset);
+}
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
