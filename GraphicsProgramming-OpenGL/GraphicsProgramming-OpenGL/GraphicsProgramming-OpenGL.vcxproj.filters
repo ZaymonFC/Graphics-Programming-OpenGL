@@ -40,7 +40,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader.vs" />
-    <None Include="shaders\shader.fs" />
+    <None Include="shaders\lampShader.fs" />
+    <None Include="shaders\lampShader.vs" />
+    <None Include="shaders\lightingShader_vertex.shader" />
+    <None Include="shaders\lightingShader_fragment.shader" />
   </ItemGroup>
 </Project>

@@ -4,7 +4,7 @@
 
 Camera::Camera(const glm::vec3 position, const glm::vec3 up, const float yaw, const float pitch)
 {
-	Front = glm::vec3(0.0f, 0.0f, -1.0f);
+	Front = glm::vec3(0.0f, 0.0f, 1.0f);
 	Position = position;
 	WorldUp = up;
 	Yaw = yaw;
@@ -40,6 +40,14 @@ auto Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) -> void
 	if (direction == RIGHT)
 	{
 		Position += Right * velocity;
+	}
+	if (direction == DOWN)
+	{
+		Position -= WorldUp * velocity;
+	}
+	if (direction == UP)
+	{
+		Position += WorldUp * velocity;
 	}
 }
 
