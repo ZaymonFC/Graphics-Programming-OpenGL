@@ -201,6 +201,7 @@ int main(int argc, char* argv[])
 		lightingShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
 		lightingShader.SetFloat("emissionIntensity", sin(glfwGetTime()));
+		lightingShader.SetFloat("time", glfwGetTime());
 		
 		// Camera and view calculations -----
 		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, 0.1f, 100.0f);
