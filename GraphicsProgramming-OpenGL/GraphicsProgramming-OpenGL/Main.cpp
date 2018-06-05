@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 	glEnable(GL_DEPTH_TEST);
 
 	// SHADER PROGRAMS
-	auto lightingShader = Shader("shaders/shader.vs", "shaders/shader.fs");
+	auto lightingShader = Shader("shaders/lightingShader_vertex.shader", "shaders/lightingShader_fragment.shader");
 	auto lampShader = Shader("shaders/lampShader.vs", "shaders/lampShader.fs");
 
 	float vertices[] = {
@@ -179,6 +179,7 @@ int main(int argc, char* argv[])
 		lightingShader.Use();
 		lightingShader.SetVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.31f));
 		lightingShader.SetVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		lightingShader.SetVec3("viewPosition", _camera.Position);
 		
 		// Camera and view calculations -----
 		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, 0.1f, 100.0f);
