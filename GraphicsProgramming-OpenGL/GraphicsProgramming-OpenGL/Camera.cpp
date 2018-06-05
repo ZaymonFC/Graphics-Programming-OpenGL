@@ -41,6 +41,14 @@ auto Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) -> void
 	{
 		Position += Right * velocity;
 	}
+	if (direction == DOWN)
+	{
+		Position -= WorldUp * velocity;
+	}
+	if (direction == UP)
+	{
+		Position += WorldUp * velocity;
+	}
 }
 
 auto Camera::ProcessMouseLook(float xOffset, float yOffset, GLboolean constrainPitch) -> void
