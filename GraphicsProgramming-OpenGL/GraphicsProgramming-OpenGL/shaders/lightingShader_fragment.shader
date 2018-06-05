@@ -19,10 +19,13 @@ uniform Light light;
 struct Material {
 	sampler2D diffuse;
 	sampler2D specular;
+	sampler2D emission;
 	float shininess;
 };
 
 uniform Material material;
+
+uniform float emissionIntensity;
 
 out vec4 FragColor;
 
@@ -53,5 +56,9 @@ void main()
 
 	// --- Result Color -----------------------------------------------------------
 	vec3 result = ambient + diffuse + specular;
+
+	// Add an emission map for giggles
+	result += (emissionIntensity * vec3(texture(material.emission, TexCoords)));
+
     FragColor = vec4(result, 1.0);
 }

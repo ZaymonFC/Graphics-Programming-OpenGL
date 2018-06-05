@@ -162,11 +162,13 @@ int main(int argc, char* argv[])
 	// Load Textures
 	const auto diffuseMap = LoadTexture("textures/container2.png");
 	const auto specularMap = LoadTexture("textures/container2_specular.png");
+	const auto emissionMap = LoadTexture("textures/emission.jpg");
 
 	// Shader Config
 	lightingShader.Use();
 	lightingShader.SetInt("material.diffuse", 0);
 	lightingShader.SetInt("material.specular", 1);
+	lightingShader.SetInt("material.emission", 2);
 
 	//
 	// ──────────────────────────────────────────────────────────────────────────────── V ──────────
@@ -197,6 +199,8 @@ int main(int argc, char* argv[])
 		lightingShader.SetVec3("light.ambient", 0.2f, 0.2f, 0.2f);
 		lightingShader.SetVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
 		lightingShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
+
+		lightingShader.SetFloat("emissionIntensity", sin(glfwGetTime()));
 		
 		// Camera and view calculations -----
 		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, 0.1f, 100.0f);
@@ -218,6 +222,10 @@ int main(int argc, char* argv[])
 		// Bind specular map
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, specularMap);
+
+		// Bind Emission Map
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, emissionMap);
 
 		// Render the cube
 		glBindVertexArray(cubeVAO);
