@@ -6,7 +6,7 @@ uniform vec3 viewPosition;
 // --- Define a struct for the Light -----------------
 struct Light {
 	vec3 position;
-	
+
 	// Light components
 	vec3 ambient;
 	vec3 diffuse;
@@ -26,6 +26,7 @@ struct Material {
 uniform Material material;
 
 uniform float emissionIntensity;
+uniform float time;
 
 out vec4 FragColor;
 
@@ -54,11 +55,12 @@ void main()
 	float specularPower = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess);
 	vec3 specular = light.specular * specularPower * vec3(texture(material.specular, TexCoords));
 
-	// --- Result Color -----------------------------------------------------------
-	vec3 result = ambient + diffuse + specular;
 
 	// Add an emission map for giggles
-	result += (emissionIntensity * vec3(texture(material.emission, TexCoords)));
+	vec3 emission = emissionIntensity * vec3(texture(material.emission, TexCoords + vec2(0.0, time)));
+	
 
-    FragColor = vec4(result, 1.0);
+	// result += (emissionIntensity * vec3(texture(material.emission, TexCoords + vec2(0.0, time))));
+
+    FragColor = vec4(ambient + diffuse + specular + emission, 1.0);
 }
