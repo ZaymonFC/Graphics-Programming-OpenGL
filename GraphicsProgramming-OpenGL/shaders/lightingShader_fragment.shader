@@ -37,11 +37,16 @@ in vec2 TexCoords;
 
 void main()
 {
+	// Calculate the normal from the normal map
+	vec3 normal = texture(material.texture_normal1, TexCoords).rgb;
+	// Transform the normal vector to range [-1, 1]
+	normal = normalize(normal * 2.0 - 1.0);
+
 	// --- Ambient Lighting -------------------------------------------------------
 	vec3 ambient = light.ambient * texture(material.texture_diffuse1, TexCoords).rgb;
 
 	// --- Diffuse Lighting -------------------------------------------------------
-	vec3 normal = normalize(Normal);
+	normal = normalize((Normal + normal)/2);
 	vec3 lightDirection = normalize(light.position - FragPos);
 
 	float diff = max(dot(normal, lightDirection), 0.0);

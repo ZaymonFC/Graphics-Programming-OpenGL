@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
 	// ──────────────────────────────────────────────────────────────────────────────────────────
 	//
 
+
 	while(!glfwWindowShouldClose(window))
 	{
 		// lighting
@@ -190,8 +191,8 @@ int main(int argc, char* argv[])
 //		glActiveTexture(GL_TEXTURE1);
 //		glBindTexture(GL_TEXTURE_2D, specularMap);
 //
-//		// Bind Emission Map
-//		glActiveTexture(GL_TEXTURE2);
+////		// Bind Emission Map
+//		glActiveTexture(GL_TEXTURE3);
 //		glBindTexture(GL_TEXTURE_2D, emissionMap);
 //
 //		// Render the cube
