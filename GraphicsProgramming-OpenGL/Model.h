@@ -19,6 +19,6 @@ public:
 	Model(const char * path);
 
 	auto Draw(Shader shaderProgram) -> void;
-	auto TextureFromFile(const char* path, const std::string& directory) -> unsigned int;
+	auto TextureFromFile(const char* path, const std::string& directory) const -> unsigned int;
 };
 

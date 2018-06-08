@@ -7,6 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+#include <PerlinNoise.hpp>
 
 #include "Shader.h"
 
@@ -47,16 +48,57 @@ auto firstMousePoll = false;
 
 
 
-//Mesh TerrainMaker(int width, int height)
-//{
-//	auto step = 1;
-//	auto x = -width / 2;
-//	auto z = -width / 2;
-//
-//	auto vertices = 
-//
-//	return Mesh();
-//}
+Mesh TerrainMaker(const float width, const float length, const float height, int wRes=256, int lRes=256)
+{
+	const auto Noise = siv::PerlinNoise();
+	const auto size = wRes * lRes;
+	auto vertices = std::vector<Vertex>(size);
+	auto normals = std::vector<glm::vec3>(size);
+	auto indices = std::vector<unsigned int>();
+
+	auto i = 0;
+	for (auto z = 0; z < lRes; ++z) for (auto x = 0; x < wRes; x++)
+	{
+		auto v = glm::vec3(x / static_cast<float>(wRes), 0, z/static_cast<float>(lRes));
+
+		v.x *= width;
+		v.z *= length;
+		v.x -= width / 2;
+		v.z -= length / 2;
+
+		// Set the height based on perline noise
+		v.y = Noise.noise0_1(v.x, v.z) * height;
+		auto vertex = Vertex();
+		vertex.Position = v;
+		vertex.Normal = glm::vec3(0, 1, 0);
+		vertices[i] = vertex;
+		
+		if ((i + 1 % wRes) != 0 && z + 1 < lRes)
+		{
+//			auto tri = glm::ivec3(i, i + wRes, i + wRes + 1);
+//			auto tri2 = glm::ivec3(i, i + wRes + 1, i + 1);
+
+			indices.emplace_back(i);
+			indices.emplace_back(i + wRes);
+			indices.emplace_back(i + wRes + 1);
+			indices.emplace_back(i);
+			indices.emplace_back(i + wRes + 1);
+			indices.emplace_back(i + 1);
+		}
+
+		++i;
+	}
+
+	// Add the texture
+	auto textures = std::vector<Texture>();
+	auto texture = Texture();
+	texture.id = LoadTexture("objects/grass.png");
+	texture.type = "texture_diffuse";
+	texture.path = "path";
+	textures.push_back(texture);
+	
+	return Mesh(vertices, indices, textures);
+}
 
 
 int main(int argc, char* argv[])
@@ -108,6 +150,7 @@ int main(int argc, char* argv[])
 	auto lampModelPath = std::experimental::filesystem::canonical("objects/cube.obj").string();
 	auto lampModel = Model(lampModelPath.c_str());
 
+	auto terrainMesh = TerrainMaker(15, 15, 2);
 	//
 	// ──────────────────────────────────────────────────────────────────────────────── V ──────────
 	//   :::::: A P P L I C A T I O N   M A I N L O O P : :  :   :    :     :        :          :
@@ -154,11 +197,20 @@ int main(int argc, char* argv[])
 		modelShader.SetMat4("model", model);
 		loadedModel.Draw(modelShader);
 
-		model = glm::translate(model, glm::vec3(0, 0, 0));
-		model = glm::scale(model, glm::vec3(50, 50, 50));
+
+//		model = glm::translate(model, glm::vec3(0, 0, 0));
+//		model = glm::scale(model, glm::vec3(50, 50, 50));
+//		modelShader.SetMat4("model", model);
+//		grassModel.Draw(modelShader);
+
+		// Draw the terrain
+		model = glm::translate(model, glm::vec3(0, -5, 0));
+		model = glm::scale(model, glm::vec3(100.0f, 100.0f, 100.0f));
 		modelShader.SetMat4("model", model);
-		grassModel.Draw(modelShader);
-		
+		terrainMesh.Draw(modelShader);
+
+
+
 //		lightingShader.Use();
 //		lightingShader.SetVec3("light.position", lightPos);
 //		lightingShader.SetVec3("viewPosition", _camera.Position);

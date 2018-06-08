@@ -170,7 +170,7 @@ auto Model::Draw(Shader shaderProgram) -> void
 }
 
 
-auto Model::TextureFromFile(const char *path, const std::string &directory) -> unsigned int
+auto Model::TextureFromFile(const char *path, const std::string &directory) const -> unsigned int
 {
 	auto filename = std::string(path);
 	filename = directory + '/' + filename;
