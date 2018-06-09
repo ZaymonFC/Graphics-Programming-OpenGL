@@ -33,6 +33,9 @@
     <ClCompile Include="Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GameObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">
@@ -56,6 +59,9 @@
     <ClInclude Include="Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GameObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\lampShader.fs" />
@@ -65,5 +71,7 @@
     <None Include="shaders\lightingShader_fragment - Copy.shader" />
     <None Include="shaders\modelShader_fragment.shader" />
     <None Include="shaders\modelShader_vertex.shader" />
+    <None Include="shaders\shadowMap_fragment.shader" />
+    <None Include="shaders\shadowMap_vertex.shader" />
   </ItemGroup>
 </Project>

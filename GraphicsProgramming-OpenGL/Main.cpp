@@ -103,6 +103,7 @@ Mesh TerrainMaker(const float width, const float length, const float height, int
 
 int main(int argc, char* argv[])
 {
+
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -138,30 +139,50 @@ int main(int argc, char* argv[])
 //	auto lightingShader = Shader("shaders/lightingShader_vertex.shader", "shaders/lightingShader_fragment.shader");
 	auto modelShader = Shader("shaders/lightingShader_vertex.shader", "shaders/lightingShader_fragment.shader");
 	auto lampShader = Shader("shaders/lampShader.vs", "shaders/lampShader.fs");
+	auto simpleDepthShader = Shader("shaders/shadowMap_vertex.shader", "shaders/shadowMap_Fragment.shader");
 
-//	auto modelShader = Shader("shaders/modelShader_vertex.shader", "shaders/modelShader_fragment.shader");
+	// Load house model
 	auto modelPath = std::experimental::filesystem::canonical("objects/house/Medieval_House.obj").string();
-//	auto modelPath = std::experimental::filesystem::canonical("objects/nanosuit/nanosuit.obj").string();
-	auto loadedModel = Model(modelPath.c_str());
+	auto houseModel = Model(modelPath.c_str());
 
-	auto grassModelPath = std::experimental::filesystem::canonical("objects/grass.obj").string();
-	auto grassModel = Model(grassModelPath.c_str());
-
+	// Load lamp model
 	auto lampModelPath = std::experimental::filesystem::canonical("objects/cube.obj").string();
 	auto lampModel = Model(lampModelPath.c_str());
 
+	// Create terrain mesh (Perlin noise)
 	auto terrainMesh = TerrainMaker(15, 15, 2);
+
+	// Configure depth map FBO
+	const unsigned int SHADOW_WIDTH = 8000, SHADOW_HEIGHT = 8000;
+	unsigned int depthMapFBO;
+	glGenFramebuffers(1, &depthMapFBO);
+
+	// create depth texture
+	unsigned int depthMap;
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	//
 	// ──────────────────────────────────────────────────────────────────────────────── V ──────────
 	//   :::::: A P P L I C A T I O N   M A I N L O O P : :  :   :    :     :        :          :
 	// ──────────────────────────────────────────────────────────────────────────────────────────
 	//
-
-
 	while(!glfwWindowShouldClose(window))
 	{
 		// lighting
-		glm::vec3 lightPos(sin(glfwGetTime()) * 5, 5, -sin(glfwGetTime()) * 5);
+		glm::vec3 lightPos(sin(glfwGetTime()) * 5, 10, -sin(glfwGetTime()) * 5);
 
 		// Timing
 		const float currentFrame = glfwGetTime();
@@ -174,6 +195,39 @@ int main(int argc, char* argv[])
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		
+		const auto near_plane = 0.1f;
+		const auto far_plane = 100.0f;
+		const auto lightProjection = glm::ortho(-15.0f, 15.0f, -10.0f, 10.0f, near_plane, far_plane);
+//		const auto lightProjection = glm::perspective(glm::radians(fov), static_cast<float>(SHADOW_WIDTH) / SHADOW_HEIGHT, 0.1f, 100.0f);
+		const auto lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+		const auto lightSpaceMatrix = lightProjection * lightView;
+
+        simpleDepthShader.Use();
+        simpleDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+		
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glCullFace(GL_FRONT);
+			glClear(GL_DEPTH_BUFFER_BIT);
+			glm::mat4 model;
+			model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
+			model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
+			modelShader.SetMat4("model", model);
+			houseModel.Draw(modelShader);
+
+			// Draw the terrain
+			model = glm::translate(model, glm::vec3(0, -5, 0));
+			model = glm::scale(model, glm::vec3(100.0f, 100.0f, 100.0f));
+			modelShader.SetMat4("model", model);
+			terrainMesh.Draw(modelShader);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glCullFace(GL_BACK);
+
+
+		glViewport(0, 0, Screen_Width, Screen_Height);
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		modelShader.Use();
 
 		// View and projection transformations
@@ -181,6 +235,7 @@ int main(int argc, char* argv[])
 		const auto view = _camera.GetViewMatrix();
 		modelShader.SetMat4("view", view);
 		modelShader.SetMat4("projection", projection);
+		modelShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 		modelShader.SetVec3("light.position", lightPos);
 		modelShader.SetVec3("viewPosition", _camera.Position);
@@ -189,19 +244,16 @@ int main(int argc, char* argv[])
 		modelShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
 		modelShader.SetFloat("material.shininess", 32.0f);
 
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+
 		// Render the loaded model
 		// World Transformation
-		glm::mat4 model;
 		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
 		modelShader.SetMat4("model", model);
-		loadedModel.Draw(modelShader);
+		houseModel.Draw(modelShader);
 
-
-//		model = glm::translate(model, glm::vec3(0, 0, 0));
-//		model = glm::scale(model, glm::vec3(50, 50, 50));
-//		modelShader.SetMat4("model", model);
-//		grassModel.Draw(modelShader);
 
 		// Draw the terrain
 		model = glm::translate(model, glm::vec3(0, -5, 0));
@@ -209,48 +261,6 @@ int main(int argc, char* argv[])
 		modelShader.SetMat4("model", model);
 		terrainMesh.Draw(modelShader);
 
-
-
-//		lightingShader.Use();
-//		lightingShader.SetVec3("light.position", lightPos);
-//		lightingShader.SetVec3("viewPosition", _camera.Position);
-//
-//		lightingShader.SetVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-//		lightingShader.SetVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-//		lightingShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
-//
-//		lightingShader.SetFloat("emissionIntensity", sin(glfwGetTime() + 0.5));
-//		lightingShader.SetFloat("time", glfwGetTime());
-//		
-//		// Camera and view calculations -----
-//		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, 0.1f, 100.0f);
-//		const auto view = _camera.GetViewMatrix();
-//
-//		// Get matrix's uniform location and set matrix
-//		lightingShader.SetMat4("view", view);
-//		lightingShader.SetMat4("projection", projection);
-//
-//
-//		// World Transformation
-//		glm::mat4 model;
-//		lightingShader.SetMat4("model", model);
-//
-//		// Bind defuse map
-//		glActiveTexture(GL_TEXTURE0);
-//		glBindTexture(GL_TEXTURE_2D, diffuseMap);
-//
-//		// Bind specular map
-//		glActiveTexture(GL_TEXTURE1);
-//		glBindTexture(GL_TEXTURE_2D, specularMap);
-//
-////		// Bind Emission Map
-//		glActiveTexture(GL_TEXTURE3);
-//		glBindTexture(GL_TEXTURE_2D, emissionMap);
-//
-//		// Render the cube
-//		glBindVertexArray(cubeVAO);
-//		glDrawArrays(GL_TRIANGLES, 0, 36);
-//
 		// Render the lamp object
 		lampShader.Use();
 		lampShader.SetMat4("projection", projection);
@@ -259,10 +269,7 @@ int main(int argc, char* argv[])
 		model = glm::translate(model, lightPos);
 		model = glm::scale(model, glm::vec3(0.2f));
 		lampShader.SetMat4("model", model);
-		
 		lampModel.Draw(lampShader);
-//		glBindVertexArray(lightVAO);
-//		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
 		// -- Swap buffers and poll IO --------------------------------------------- 
@@ -270,13 +277,10 @@ int main(int argc, char* argv[])
 		glfwPollEvents();
 	}
 
-	// Mop the floor
-//	glDeleteVertexArrays(1, &cubeVAO);
-//	glDeleteBuffers(1, &VBO);
-
 	glfwTerminate();
 	return 0;
 }
+
 
 auto ProcessInput(GLFWwindow* window) -> void
 {

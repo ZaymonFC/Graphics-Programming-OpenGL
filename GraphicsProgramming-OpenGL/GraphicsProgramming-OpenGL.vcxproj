@@ -132,12 +132,14 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="GameObject.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Shader.h" />
@@ -151,6 +153,8 @@
     <None Include="shaders\lightingShader_vertex.shader" />
     <None Include="shaders\modelShader_fragment.shader" />
     <None Include="shaders\modelShader_vertex.shader" />
+    <None Include="shaders\shadowMap_fragment.shader" />
+    <None Include="shaders\shadowMap_vertex.shader" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
