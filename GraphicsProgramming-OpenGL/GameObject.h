@@ -1,21 +1,24 @@
 #pragma once
 #include <GLM/mat4x4.hpp>
 #include "Mesh.h"
+#include "Model.h"
+#include "FrustumG.h"
 
 class GameObject
 {
 public:
 	glm::vec3 worldPosition;
 	glm::vec3 worldRotation;
-	Mesh mesh;
+	glm::vec3 worldScale;
+	Model model;
 
-	GameObject(Mesh mesh, glm::vec3 initialPosition, glm::vec3 initialRotation);
+	GameObject(Model model, glm::vec3 initialPosition, glm::vec3 initialRotation, glm::vec3 initialScale);
 
+	auto Draw(Shader shaderProgram, FrustumG & frustum) -> void;
 	auto Draw(Shader shaderProgram) -> void;
 
 	auto Teleport(glm::vec3 position) -> void;
-	auto Translate(float xAmount, float yAmount, float zAmount) -> void;
-
 	auto Rotate(glm::vec3 rotations) -> void;
+	auto Scale(glm::vec3 scale) -> void;
 };
 

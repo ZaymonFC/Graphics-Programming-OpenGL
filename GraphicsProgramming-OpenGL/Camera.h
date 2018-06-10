@@ -37,11 +37,14 @@ public:
 	float MovementSpeed;
 	float MouseSensitivity;
 
-	Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
+	Camera(glm::vec3 position = glm::vec3(5.0f, 1.0f, 5.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
 	
 	auto GetViewMatrix() const -> glm::mat4;
 	auto ProcessKeyboard(Camera_Movement direction, float deltaTime) -> void;
 	auto ProcessMouseLook(float xOffset, float yOffset, GLboolean constrainPitch = true) -> void;
+	glm::vec3 GetPosition();
+	glm::vec3 GetFront();
+	glm::vec3 GetUp();
 
 private:
 	auto UpdateCameraState() -> void;

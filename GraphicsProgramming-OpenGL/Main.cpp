@@ -16,7 +16,11 @@
 #include "Camera.h"
 #include "Model.h"
 #include <filesystem>
+#include "FrustumG.h"
+#include "GameObject.h"
 
+#include <windows.h>
+#include <mmsystem.h>
 
 //
 // ─── FUNCTION PROTOTYPES ────────────────────────────────────────────────────────
@@ -32,7 +36,10 @@ auto LoadTexture(const char * path) -> unsigned int;
 const auto Screen_Width = 1280.0f;
 const auto Screen_Height = 720.0f;
 const auto fov = 55.0f;
+const auto nearCullDistance = 0.1f;
+const auto farCullDistance = 80.0f;
 
+auto shadowMap = false;
 
 // Camera Base
 auto _camera = Camera();
@@ -144,16 +151,22 @@ int main(int argc, char* argv[])
 	// Load house model
 	auto modelPath = std::experimental::filesystem::canonical("objects/house/Medieval_House.obj").string();
 	auto houseModel = Model(modelPath.c_str());
+	auto houseObject = GameObject(houseModel, glm::vec3(0), glm::vec3(0), glm::vec3(0.02, 0.02, 0.02));
 
 	// Load lamp model
-	auto lampModelPath = std::experimental::filesystem::canonical("objects/cube.obj").string();
-	auto lampModel = Model(lampModelPath.c_str());
+	modelPath = std::experimental::filesystem::canonical("objects/grass.obj").string();
+	auto grassModel = Model(modelPath.c_str());
+	auto grassObject = GameObject(grassModel, glm::vec3(0), glm::vec3(0), glm::vec3(10, 10, 10));
+
+	// Load lamp model
+	modelPath = std::experimental::filesystem::canonical("objects/cube.obj").string();
+	auto lampModel = Model(modelPath.c_str());
 
 	// Create terrain mesh (Perlin noise)
 	auto terrainMesh = TerrainMaker(15, 15, 2);
 
 	// Configure depth map FBO
-	const unsigned int SHADOW_WIDTH = 8000, SHADOW_HEIGHT = 8000;
+	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 	unsigned int depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
 
@@ -173,6 +186,85 @@ int main(int argc, char* argv[])
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	// Create frustrum for frustrum culling
+	auto frustum = FrustumG();
+	frustum.setCamInternals(fov, Screen_Width * 1.0 / Screen_Height, nearCullDistance, farCullDistance);
+
+
+	// 'Game' Music
+	PlaySound("africa.wav", nullptr, SND_FILENAME | SND_ASYNC);
+
+
+	// VAO and VBO for the Emission Cube (Legacy object method)
+	float vertices[] = {
+		// positions          // normals           // texture coords
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
+	};
+
+
+	unsigned int VBO, cubeVAO;
+	glGenVertexArrays(1, &cubeVAO);
+	glGenBuffers(1, &VBO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// Bind vertex attribute object first and set vertex buffers then configure vertex attributes
+	glBindVertexArray(cubeVAO);
+
+	// Position Attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), static_cast<void *>(nullptr));
+	glEnableVertexAttribArray(0);
+	// Normal Attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	// Texture Attribute
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	const auto diffuseMap = LoadTexture("textures/container2.png");
+	const auto specularMap = LoadTexture("textures/container2_specular.png");
+	const auto emissionMap = LoadTexture("textures/emission.jpg");
 
 	//
 	// ──────────────────────────────────────────────────────────────────────────────── V ──────────
@@ -182,7 +274,7 @@ int main(int argc, char* argv[])
 	while(!glfwWindowShouldClose(window))
 	{
 		// lighting
-		glm::vec3 lightPos(sin(glfwGetTime()) * 5, 10, -sin(glfwGetTime()) * 5);
+		const auto lightPos = glm::vec3(sin(glfwGetTime()) * 5, 10, -sin(glfwGetTime()) * 5);
 
 		// Timing
 		const float currentFrame = glfwGetTime();
@@ -192,50 +284,58 @@ int main(int argc, char* argv[])
 		ProcessInput(window);
 
 		// -- Render ---------------------------------------------------------------
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		glm::mat4 model;
+		glm::mat4 lightSpaceMatrix;
 		
-		const auto near_plane = 0.1f;
-		const auto far_plane = 100.0f;
-		const auto lightProjection = glm::ortho(-15.0f, 15.0f, -10.0f, 10.0f, near_plane, far_plane);
-//		const auto lightProjection = glm::perspective(glm::radians(fov), static_cast<float>(SHADOW_WIDTH) / SHADOW_HEIGHT, 0.1f, 100.0f);
-		const auto lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-		const auto lightSpaceMatrix = lightProjection * lightView;
+		if (shadowMap)
+		{
+			//
+			// ─── DEPTH MAP PASS ──────────────────────────────────────────────
+			//
+			glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        simpleDepthShader.Use();
-        simpleDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
-		
-		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glCullFace(GL_FRONT);
+			const auto near_plane = 0.1f;
+			const auto far_plane = 10.0f;
+			const auto lightProjection = glm::ortho(10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+			const auto lightView = glm::lookAt(lightPos, glm::vec3(0), glm::vec3(0.0, 1.0, 0.0));
+			lightSpaceMatrix = lightProjection * lightView;
+
+			simpleDepthShader.Use();
+			simpleDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+			glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+			glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 			glClear(GL_DEPTH_BUFFER_BIT);
-			glm::mat4 model;
-			model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
-			model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
-			modelShader.SetMat4("model", model);
-			houseModel.Draw(modelShader);
-
-			// Draw the terrain
-			model = glm::translate(model, glm::vec3(0, -5, 0));
-			model = glm::scale(model, glm::vec3(100.0f, 100.0f, 100.0f));
-			modelShader.SetMat4("model", model);
-			terrainMesh.Draw(modelShader);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glCullFace(GL_BACK);
 
 
+			houseObject.Draw(simpleDepthShader);
+			grassObject.Draw(simpleDepthShader);
+			
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
+		//
+		// ─── RENDER PASS ─────────────────────────────────────────────────
+		//
 		glViewport(0, 0, Screen_Width, Screen_Height);
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		modelShader.Use();
 
 		// View and projection transformations
-		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, 0.1f, 100.0f);
+		const auto projection = glm::perspective(glm::radians(fov), Screen_Width / Screen_Height, nearCullDistance, farCullDistance);
 		const auto view = _camera.GetViewMatrix();
 		modelShader.SetMat4("view", view);
 		modelShader.SetMat4("projection", projection);
-		modelShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+		if (shadowMap)
+		{
+			modelShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, depthMap);
+		}
 
 		modelShader.SetVec3("light.position", lightPos);
 		modelShader.SetVec3("viewPosition", _camera.Position);
@@ -244,33 +344,81 @@ int main(int argc, char* argv[])
 		modelShader.SetVec3("light.specular", 1.0f, 1.0f, 1.0f);
 		modelShader.SetFloat("material.shininess", 32.0f);
 
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, depthMap);
+		// Set the frustrum
+		const auto camPosition = glm::vec3(_camera.GetPosition());
+		const auto facing = glm::vec3(_camera.GetFront() + _camera.GetPosition());
+		const auto cameraUp = glm::vec3(_camera.GetUp());
 
-		// Render the loaded model
-		// World Transformation
-		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
-		modelShader.SetMat4("model", model);
-		houseModel.Draw(modelShader);
+		frustum.setCamDef(camPosition, facing, cameraUp);
 
+		houseObject.Draw(modelShader, frustum);
+		grassObject.Draw(modelShader, frustum);
 
 		// Draw the terrain
-		model = glm::translate(model, glm::vec3(0, -5, 0));
-		model = glm::scale(model, glm::vec3(100.0f, 100.0f, 100.0f));
+		model = glm::mat4(1);
+		model = glm::translate(model, glm::vec3(25, 0, 25));
+		model = glm::scale(model, glm::vec3(3, 3, 3));
 		modelShader.SetMat4("model", model);
 		terrainMesh.Draw(modelShader);
 
+		// Draw the Emission cube -------------------
+		modelShader.SetFloat("time", glfwGetTime());
+
+		// Bind defuse map
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, diffuseMap);
+
+		// Bind specular map
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, specularMap);
+
+		// Bind Emission Map
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, emissionMap);
+
+		modelShader.SetInt("material.texture_diffuse1", 0);
+		modelShader.SetInt("material.texture_specular1", 1);
+		modelShader.SetInt("material.emission", 2);
+		modelShader.SetFloat("emissionIntensity", sin(glfwGetTime()));
+
+		// Render the cube circle
+		const auto numberOfCubes = 10;
+		const auto radius = 5;
+		for (auto i = 0; i < numberOfCubes; ++i)
+		{
+			auto x = radius * cos(2 * 3.14159262 * i / numberOfCubes);
+			auto z = radius * sin(2 * 3.14159262 * i / numberOfCubes);
+
+			model = glm::mat4(1.0f);
+
+			model = glm::translate(model, glm::vec3(x, 1, z));
+			model = glm::rotate(model, glm::radians(static_cast<float>(glfwGetTime() * 10)), glm::vec3(1, 0, 0));
+			model = glm::rotate(model, glm::radians(static_cast<float>(glfwGetTime() * 10)), glm::vec3(0, 1, 0));
+			model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 0, 1));
+			model = glm::scale(model, glm::vec3(1, 1, 1));
+
+			modelShader.SetMat4("model", model);
+			glBindVertexArray(cubeVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+
+		// Reset sampler uniforms for other models
+		modelShader.SetInt("material.texture_diffuse1", 0);
+		modelShader.SetInt("material.texture_specular1", 1);
+		modelShader.SetInt("material.emission", 3);
+
 		// Render the lamp object
 		lampShader.Use();
-		lampShader.SetMat4("projection", projection);
-		lampShader.SetMat4("view", view);
 		model = glm::mat4();
 		model = glm::translate(model, lightPos);
 		model = glm::scale(model, glm::vec3(0.2f));
-		lampShader.SetMat4("model", model);
-		lampModel.Draw(lampShader);
 
+		lampShader.SetMat4("projection", projection);
+		lampShader.SetMat4("view", view);
+		lampShader.SetMat4("model", model);
+
+
+		lampModel.Draw(lampShader);
 
 		// -- Swap buffers and poll IO --------------------------------------------- 
 		glfwSwapBuffers(window);
@@ -313,6 +461,10 @@ auto ProcessInput(GLFWwindow* window) -> void
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 	{
 		_camera.ProcessKeyboard(UP, deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
+	{
+		shadowMap = true;
 	}
 
 }

@@ -8,7 +8,7 @@
 auto Model::LoadModel(std::string path) -> void
 {
 	Assimp::Importer importer;
-	const auto scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenNormals);
+	auto scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs| aiProcess_GenNormals);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
@@ -29,7 +29,7 @@ auto Model::ProcessNode(aiNode* node, const aiScene* scene) -> void
 	for (unsigned int i = 0; i < node->mNumMeshes; ++i)
 	{
 		const auto mesh = scene->mMeshes[node->mMeshes[i]];
-		meshes_.push_back(ProcessMesh(mesh, scene));
+		meshes.push_back(ProcessMesh(mesh, scene));
 	}
 
 	// Recurse on all children of node
@@ -163,7 +163,7 @@ Model::Model(const char* path)
 
 auto Model::Draw(Shader shaderProgram) -> void
 {
-	for (auto&& mesh : meshes_)
+	for (auto&& mesh : meshes)
 	{
 		mesh.Draw(shaderProgram);
 	}

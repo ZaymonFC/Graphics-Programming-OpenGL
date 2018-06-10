@@ -6,7 +6,6 @@
 class Model
 {
 private:
-	std::vector<Mesh> meshes_;
 	std::string directory_;
 	std::vector<Texture> loadedTextures_;
 
@@ -16,7 +15,9 @@ private:
 	auto LoadTextureMaterials(aiMaterial * material, aiTextureType textureType, std::string typeName) -> std::vector<Texture>;
 
 public:
+	std::vector<Mesh> meshes;
 	Model(const char * path);
+	Model() = default;
 
 	auto Draw(Shader shaderProgram) -> void;
 	auto TextureFromFile(const char* path, const std::string& directory) const -> unsigned int;

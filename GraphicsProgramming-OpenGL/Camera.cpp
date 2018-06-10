@@ -74,6 +74,21 @@ auto Camera::ProcessMouseLook(float xOffset, float yOffset, GLboolean constrainP
 	UpdateCameraState();
 }
 
+glm::vec3 Camera::GetPosition()
+{
+	return glm::vec3(Position);
+}
+
+glm::vec3 Camera::GetFront()
+{
+	return glm::vec3(Front);
+}
+
+glm::vec3 Camera::GetUp()
+{
+	return glm::vec3(Up);
+}
+
 auto Camera::UpdateCameraState() -> void
 {
 	glm::vec3 front;

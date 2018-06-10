@@ -16,7 +16,6 @@ uniform mat4 lightSpaceMatrix;
 
 void main()
 {
-	// Transform the fragment position to world space before forwarding (The light position is in world space)
 	FragPos = vec3(model * vec4(aPos, 1.0));
 	FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
 	Normal = aNormal;

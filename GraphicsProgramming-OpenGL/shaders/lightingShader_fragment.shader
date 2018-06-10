@@ -60,34 +60,44 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 void main()
 {
 	// Calculate the normal from the normal map
-	vec3 normal = texture(material.texture_normal1, TexCoords).rgb;
+	//vec3 texnormal = texture(material.texture_normal1, TexCoords).rgb;
 	// Transform the normal vector to range [-1, 1]
-	normal = normalize(normal * 2.0 - 1.0);
+	//texnormal = normalize(texnormal * 2.0 - 1.0);
 
 	// --- Ambient Lighting -------------------------------------------------------
 	vec3 ambient = light.ambient * texture(material.texture_diffuse1, TexCoords).rgb;
 
 	// --- Diffuse Lighting -------------------------------------------------------
-	normal = normalize((Normal + normal)/2);
+	vec3 normal = normalize(Normal);
+
 	vec3 lightDirection = normalize(light.position - FragPos);
 
 	float diff = max(dot(normal, lightDirection), 0.0);
 	vec3 diffuse = light.diffuse * diff * texture(material.texture_diffuse1, TexCoords).rgb;
+
+//	diff = max(dot(texnormal, lightDirection), 0.0);
+//	vec3 diffuseNormal = light.diffuse * diff * texture(material.texture_diffuse1, TexCoords).rgb;
 
 	// --- Specular lighting ------------------------------------------------------
 	// Calculate the view direction and corresponding reflect vector (along normal axis)
 	vec3 viewDirection = normalize(viewPosition - FragPos);
 	vec3 reflectDirection = reflect(-lightDirection, normal);
 
+//	vec3 reflectDirectionTexNormal = reflect(-lightDirection, texnormal);
+
 	// Calculate the specular component
 	float specularPower = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess);
 	vec3 specular = light.specular * specularPower * vec3(texture(material.texture_specular1, TexCoords));
-
+	
+//	specularPower = pow(max(dot(viewDirection, reflectDirection), 0.0), material.shininess);
+//	vec3 specularNormal = light.specular * specularPower * vec3(texture(material.texture_specular1, TexCoords));
+//
+//	diffuse = (diffuse + diffuseNormal) / 2;
+//	specular = (specular + specularNormal) / 2;
 
 	// Add an emission map for giggles
 	vec3 emission = emissionIntensity * vec3(texture(material.emission, TexCoords + vec2(0.0, time)));
 	
-
 	// result += (emissionIntensity * vec3(texture(material.emission, TexCoords + vec2(0.0, time))));
 
 	// Calculate shadow
